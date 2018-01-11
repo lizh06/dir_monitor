@@ -9,8 +9,6 @@
 #include "basic_dir_monitor.hpp"
 #include <boost/predef/os.h>
 
-// #define BOOST_OS_LINUX 1
-
 #if BOOST_OS_WINDOWS
 #  include "windows/basic_dir_monitor_service.hpp"
 #elif (BOOST_OS_LINUX || BOOST_OS_ANDROID)

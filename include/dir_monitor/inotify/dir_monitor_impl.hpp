@@ -22,10 +22,6 @@
 #include <sys/inotify.h>
 #include <errno.h>
 
-// namespace boost {
-// template <class E> void throw_exception(E const & e) { throw e; }
-// }
-
 namespace asio {
 
 class dir_monitor_impl
