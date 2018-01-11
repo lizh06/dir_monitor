@@ -1,0 +1,9 @@
+sed '
+/boost\/bind.hpp/d;
+/boost\/system\/error_code.hpp/d;
+s/boost\/asio.hpp/asio.hpp/g;
+s/boost\/system\/system_error.hpp/system_error/g;
+s/boost\/filesystem.hpp/filesystem/g;
+
+s/boost::filesystem/std::experimental::filesystem/g;
+' $@

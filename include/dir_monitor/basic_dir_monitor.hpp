@@ -6,11 +6,10 @@
 //
 #pragma once
 
-#include <boost/asio.hpp>
-#include <boost/filesystem.hpp>
+#include <asio.hpp>
+#include <experimental/filesystem>
 #include <string>
 
-namespace boost {
 namespace asio {
 
 struct dir_monitor_event
@@ -32,23 +31,23 @@ struct dir_monitor_event
     dir_monitor_event()
         : type(null) { }
 
-    dir_monitor_event(const boost::filesystem::path &p, event_type t)
+    dir_monitor_event(const std::experimental::filesystem::path &p, event_type t)
         : path(p), type(t) { }
 
     const char* type_cstr() const
     {
         switch(type) {
-            case boost::asio::dir_monitor_event::added: return "ADDED";
-            case boost::asio::dir_monitor_event::removed: return "REMOVED";
-            case boost::asio::dir_monitor_event::modified: return "MODIFIED";
-            case boost::asio::dir_monitor_event::renamed_old_name: return "RENAMED (OLD NAME)";
-            case boost::asio::dir_monitor_event::renamed_new_name: return "RENAMED (NEW NAME)";
-            case boost::asio::dir_monitor_event::recursive_rescan: return "RESCAN DIR";
+            case asio::dir_monitor_event::added: return "ADDED";
+            case asio::dir_monitor_event::removed: return "REMOVED";
+            case asio::dir_monitor_event::modified: return "MODIFIED";
+            case asio::dir_monitor_event::renamed_old_name: return "RENAMED (OLD NAME)";
+            case asio::dir_monitor_event::renamed_new_name: return "RENAMED (NEW NAME)";
+            case asio::dir_monitor_event::recursive_rescan: return "RESCAN DIR";
             default: return "UNKNOWN";
         }
     }
 
-    boost::filesystem::path path;
+    std::experimental::filesystem::path path;
     event_type type;
 };
 
@@ -60,11 +59,11 @@ inline std::ostream& operator << (std::ostream& os, dir_monitor_event const& ev)
 
 template <typename Service>
 class basic_dir_monitor
-    : public boost::asio::basic_io_object<Service>
+    : public asio::basic_io_object<Service>
 {
 public:
-    explicit basic_dir_monitor(boost::asio::io_service &io_service)
-        : boost::asio::basic_io_object<Service>(io_service)
+    explicit basic_dir_monitor(asio::io_service &io_service)
+        : asio::basic_io_object<Service>(io_service)
     {
     }
 
@@ -80,13 +79,13 @@ public:
 
     dir_monitor_event monitor()
     {
-        boost::system::error_code ec;
+        std::error_code ec;
         dir_monitor_event ev = this->get_service().monitor(this->get_implementation(), ec);
-        boost::asio::detail::throw_error(ec);
+        asio::detail::throw_error(ec);
         return ev;
     }
 
-    dir_monitor_event monitor(boost::system::error_code &ec)
+    dir_monitor_event monitor(std::error_code &ec)
     {
         return this->get_service().monitor(this->get_implementation(), ec);
     }
@@ -98,6 +97,5 @@ public:
     }
 };
 
-}
 }
 

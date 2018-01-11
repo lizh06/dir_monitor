@@ -6,12 +6,10 @@
 //
 #pragma once
 
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <asio.hpp>
 #include <boost/bimap.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/system/error_code.hpp>
-#include <boost/system/system_error.hpp>
+#include <experimental/filesystem>
+#include <system_error>
 
 #include <array>
 #include <condition_variable>
@@ -24,7 +22,10 @@
 #include <sys/inotify.h>
 #include <errno.h>
 
-namespace boost {
+// namespace boost {
+// template <class E> void throw_exception(E const & e) { throw e; }
+// }
+
 namespace asio {
 
 class dir_monitor_impl
@@ -33,9 +34,10 @@ public:
     dir_monitor_impl()
         : fd_(init_fd()),
         run_(true),
-        inotify_work_(new boost::asio::io_service::work(inotify_io_service_)),
-        inotify_work_thread_(boost::bind(&boost::asio::io_service::run, &inotify_io_service_)),
-        stream_descriptor_(new boost::asio::posix::stream_descriptor(inotify_io_service_, fd_))
+        inotify_work_(new asio::io_service::work(inotify_io_service_)),
+        inotify_work_thread_([this]{ inotify_io_service_.run(); }),
+        // inotify_work_thread_(std::bind(&asio::io_service::run, &inotify_io_service_)),
+        stream_descriptor_(new asio::posix::stream_descriptor(inotify_io_service_, fd_))
     {
     }
 
@@ -44,7 +46,7 @@ public:
         int wd = inotify_add_watch(fd_, dirname.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
         if (wd == -1)
         {
-            boost::system::system_error e(boost::system::error_code(errno, boost::system::get_system_category()), "boost::asio::dir_monitor_impl::add_directory: inotify_add_watch failed");
+            std::system_error e(std::error_code(errno, std::system_category()), "asio::dir_monitor_impl::add_directory: inotify_add_watch failed");
             boost::throw_exception(e);
         }
 
@@ -69,9 +71,9 @@ public:
 
     void check_sub_directory(const std::string &dirname, bool add_sub_directory)
     {
-        boost::filesystem::directory_iterator end;
-        for (boost::filesystem::directory_iterator iter(dirname); iter != end; ++iter) {
-            if (boost::filesystem::is_directory(*iter)) {
+        std::experimental::filesystem::directory_iterator end;
+        for (std::experimental::filesystem::directory_iterator iter(dirname); iter != end; ++iter) {
+            if (std::experimental::filesystem::is_directory(*iter)) {
                 if (add_sub_directory) {
                     try {
                         add_directory((*iter).path().string());
@@ -97,15 +99,15 @@ public:
         events_cond_.notify_all();
     }
 
-    dir_monitor_event popfront_event(boost::system::error_code &ec)
+    dir_monitor_event popfront_event(std::error_code &ec)
     {
         std::unique_lock<std::mutex> lock(events_mutex_);
         events_cond_.wait(lock, [&]() { return !(run_ && events_.empty()); });
         
         dir_monitor_event ev;
-        ec = boost::system::error_code();
+        ec = std::error_code();
         if (!run_)
-            ec = boost::asio::error::operation_aborted;
+            ec = asio::error::operation_aborted;
         else if (!events_.empty())
         {
             ev = events_.front();
@@ -131,7 +133,7 @@ private:
         int fd = inotify_init();
         if (fd == -1)
         {
-            boost::system::system_error e(boost::system::error_code(errno, boost::system::get_system_category()), "boost::asio::dir_monitor_impl::init_fd: init_inotify failed");
+            std::system_error e(std::error_code(errno, std::system_category()), "asio::dir_monitor_impl::init_fd: init_inotify failed");
             boost::throw_exception(e);
         }
         return fd;
@@ -140,13 +142,13 @@ private:
 public:
     void begin_read()
     {
-        stream_descriptor_->async_read_some(boost::asio::buffer(read_buffer_),
-            boost::bind(&dir_monitor_impl::end_read, this,
-            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+        stream_descriptor_->async_read_some(asio::buffer(read_buffer_),
+            std::bind(&dir_monitor_impl::end_read, this,
+            asio::placeholders::error, asio::placeholders::bytes_transferred));
     }
 
 private:
-    void end_read(const boost::system::error_code &ec, std::size_t bytes_transferred)
+    void end_read(const std::error_code &ec, std::size_t bytes_transferred)
     {
         if (!ec)
         {
@@ -169,15 +171,15 @@ private:
                         break;
                     }
                 }
-                pushback_event(dir_monitor_event(boost::filesystem::path(get_dirname(iev->wd)) / iev->name, type));
+                pushback_event(dir_monitor_event(std::experimental::filesystem::path(get_dirname(iev->wd)) / iev->name, type));
                 pending_read_buffer_.erase(0, sizeof(inotify_event) + iev->len);
             }
 
             begin_read();
         }
-        else if (ec != boost::asio::error::operation_aborted)
+        else if (ec != asio::error::operation_aborted)
         {
-            boost::system::system_error e(ec);
+            std::system_error e(ec);
             boost::throw_exception(e);
         }
     }
@@ -191,11 +193,11 @@ private:
 
     int fd_;
     bool run_;
-    boost::asio::io_service inotify_io_service_;
-    std::unique_ptr<boost::asio::io_service::work> inotify_work_;
+    asio::io_service inotify_io_service_;
+    std::unique_ptr<asio::io_service::work> inotify_work_;
     std::thread inotify_work_thread_;
     
-    std::unique_ptr<boost::asio::posix::stream_descriptor> stream_descriptor_;
+    std::unique_ptr<asio::posix::stream_descriptor> stream_descriptor_;
     std::array<char, 4096> read_buffer_;
     std::string pending_read_buffer_;
     std::mutex watch_descriptors_mutex_;
@@ -206,6 +208,5 @@ private:
     std::deque<dir_monitor_event> events_;
 };
 
-}
 }
 
