@@ -29,7 +29,7 @@ public:
     explicit basic_dir_monitor_service(asio::io_service &io_service)
         : asio::io_service::service(io_service),
         async_monitor_work_(new asio::io_service::work(async_monitor_io_service_)),
-        async_monitor_thread_(std::bind(&asio::io_service::run, &async_monitor_io_service_))
+        async_monitor_thread_([this]{ async_monitor_io_service_.run(); })
     {
     }
 
